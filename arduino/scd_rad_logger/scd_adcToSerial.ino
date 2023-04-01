@@ -3,10 +3,22 @@
 #endif
 #include <SPI.h>
 
+#define SPEXSAT_BOARD_MEGA
+
+#ifdef SPEXSAT_BOARD_UNO
 #define ADC_DOUT 11 //This connects to the DOUT pin on the ADC
 #define ADC_DIN 12
 #define ADC_SCLK 13
 #define ADC_CS 10
+#endif
+
+#ifdef SPEXSAT_BOARD_MEGA
+#define ADC_DOUT 23 //This connects to the DOUT pin on the ADC
+#define ADC_DIN 24
+#define ADC_SCLK 25
+#define ADC_CS 22
+#endif
+
 #define ADC_BITC 12
 #define ADC_CHANNEL_BYTE 0//0 = channel 1, 1 = channel 2
 #define ADC_CHB_LOC 3
@@ -58,7 +70,7 @@ return adcVal;
 
 void loop() {
 
-Serial.println(read_adc());
+Serial.println("Val: "+read_adc() + " Time: " + millis());
 
 }
 

@@ -38,7 +38,7 @@ Serial.begin(9600);
 }
 
 int read_adc(){
-int adcVal=0;
+long adcVal=0;
 byte cmdBits=b00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
 
 digitalWrite(ADC_CS, LOW);

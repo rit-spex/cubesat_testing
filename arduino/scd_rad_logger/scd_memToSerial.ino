@@ -1,23 +1,36 @@
 #ifndef SPEXSAT_BAUD
-    #define SPEXSAT_BAUS 9600
+    #define SPEXSAT_BAUD 9600
 #endif
 
 #include <SPI.h>
 
 #define SPEXSAT_BOARD_MEGA
 
+/*
+PIN SETUP FOR ELECTRICAL PEOPLE
+1: CS   8: VCC
+2: SIO1 7: SIO3
+3: SIO2 6: SCLK
+4: GND  5: SIO0
+
+*/
+
 #ifdef SPEXSAT_BOARD_UNO
-    #define MEM_DOUT 7 //This connects to the DOUT pin on the MEM
-    #define MEM_DIN 8
-    #define MEM_SCLK 9
-    #define MEM_CS 6
+    #define MEM_CS 9
+    #define MEM_SCLK 8
+    #define MEM_SIO0 7
+    #define MEM_SIO1 6
+    #define MEM_SIO2 5
+    #define MEM_SIO3 4
 #endif
 
 #ifdef SPEXSAT_BOARD_MEGA
-    #define MEM_DOUT 27 //This connects to the DOUT pin on the MEM
-    #define MEM_DIN 28
-    #define MEM_SCLK 29
-    #define MEM_CS 26
+    #define MEM_SCLK 26
+    #define MEM_CS 27
+    #define MEM_SIO0 28
+    #define MEM_SIO1 29
+    #define MEM_SIO2 30
+    #define MEM_SIO3 31
 #endif
 
 #define MEM_BITC 12

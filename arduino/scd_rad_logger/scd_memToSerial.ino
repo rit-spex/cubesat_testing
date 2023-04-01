@@ -33,7 +33,6 @@ PIN SETUP FOR ELECTRICAL PEOPLE
     #define MEM_SIO3 31
 #endif
 
-#define MEM_EQIO 0x35
 #define MEM_EN4B 0xB7
 #define MEM_SUS 0xB0 //suspends current program/erase
 #define MEM_RES 0x30 //resumes suspended program/erase
@@ -42,8 +41,33 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_WREN 0x06 //write enable
 #define MEM_WRDI 0x04 //write disable
 #define MEM_SE 0x20 //sector erase
-#define MEM_READ 0xEC //4READ4B on datasheet, next 4 bytes are memory address, 6th is dummy
-#define MEM_WRITE 0x3E //4PP4B on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
+#define MEM_READ 0xEB //4READ on datasheet, next 4 bytes are memory address, 6th is dummy
+#define MEM_WRITE 0x38 //4PP on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
+
+void tMSCLK(){
+    digitalWrite(MEM_SCLK, HIGH);
+    digitalWrite(MEM_SCLK, LOW);
+}
+
+void writeByte(byte cmd){
+    for(int i = 7; i>=0; i--){
+        digitalWrite(MEM_SIO0, cmd&1<<i);
+        tMSCLK();
+    }
+}
+
+void 4ioWriteByte(byte cmd){
+    digitalWrite(MEM_SIO0,cmd&1<<4);
+    digitalWrite(MEM_SIO1,cmd&1<<5);
+    digitalWrite(MEM_SIO2,cmd&1<<6);
+    digitalWrite(MEM_SIO3,cmd&1<<7);
+    tMSCLK();
+    digitalWrite(MEM_SIO0,cmd&1<<0);
+    digitalWrite(MEM_SIO1,cmd&1<<1);
+    digitalWrite(MEM_SIO2,cmd&1<<2);
+    digitalWrite(MEM_SIO3,cmd&1<<3);
+    tMSCLK();
+}
 
 void setup() {
 
@@ -57,39 +81,68 @@ void setup() {
     digitalWrite(MEM_CS, HIGH);
     digitalWrite(MEM_IN, LOW);
     digitalWrite(MEM_SCLK, LOW);
+    
+    digitalWrite(MEM_CS, LOW);
+    //enabling 4 byte addressing
+    writeCMD(MEM_EN4B);    
+    digitalWrite(MEM_CS, HIGH);
 
     Serial.begin(9600);
 }
 
-int read_mem(){
+private byte read_byte(){
+    byte outB = 0;
+    tMSCLK();
+    outB |= digitalRead(MEM_SIO0)<<4;
+    outB |= digitalRead(MEM_SIO1)<<5;
+    outB |= digitalRead(MEM_SIO2)<<6;
+    outB |= digitalRead(MEM_SIO3)<<7;
+    tMSCLK();
+    outB |= digitalRead(MEM_SIO0)<<0;
+    outB |= digitalRead(MEM_SIO1)<<1;
+    outB |= digitalRead(MEM_SIO2)<<2;
+    outB |= digitalRead(MEM_SIO3)<<3;
+    return outB;
+}
+
+int read_mem(byte[4] address, byte nBytes){
     long memVal=0;
-    byte cmdBits=b00000000 | MEM_CHANNEL_BYTE << MEM_CHB_LOC;
 
     digitalWrite(MEM_CS, LOW);
 
     //writes command bits
-    for(int i = 7; i>=4; i--){
-        digitalWrite(MEM_DIN, cmdBits & 1<<i);
-        digitalWrite(MEM_SCLK, HIGH);
-        digitalWrite(MEM_SCLK, LOW);
+    writeByte(MEM_READ);
+    for(int i = 3; i >= 0; i--){
+       4ioWriteByte(address[i]);
     }
-    int j = MEM_BITC-1
-    for(int i = 3; i>= 0; i--, j--){
-        digitalWrite(MEM_DIN, cmdBits & 1<<i);
-        memVal += digitalRead(MEM_DOUT)<<j;
-        digitalWrite(MEM_SCLK, HIGH);
-        digitalWrite(MEM_SCLK, LOW);
+    4ioWriteByte(); //TODO: write whatever performance enhancement indicator is
+    
+    for(int i = (/*TODO: dummy cycles*/-1); i>=0; i--){
+        tMSCLK();
     }
 
-
-    for(; j>=0; j--){
-        memVal += digitalRead(MEM_DOUT)<<j;
-        digitalWrite(MEM_SCLK, HIGH);
-        digitalWrite(MEM_SCLK, LOW);
+    for(int i = nBytes-1; i>= 0; i--){
+        memVal.append(read_byte()); //TODO: figure out what datatype memVal should be (this is also the function return type), probably vector?
     }
+
     digitalWrite(MEM_CS, HIGH);
 
     return memVal;
+}
+
+void write_mem(byte[4] address, byte* bytes, byte nBytes){
+    digitalWrite(MEM_CS, LOW);
+
+    writeByte(MEM_WRITE);
+    for(int i = 3; i >=0; i--){
+        4ioWriteByte(address[i]);
+    }
+    
+    for(int i = nBytes; i>=0; i--){
+        4ioWriteByte(bytes[i]);
+    }
+
+    digitalWrite(MEM_CS, HIGH);
 }
 
 void loop() {

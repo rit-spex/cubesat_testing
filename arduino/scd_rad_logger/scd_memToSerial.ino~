@@ -43,7 +43,6 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_SE 0x20 //sector erase
 #define MEM_READ 0xEB //4READ on datasheet, next 4 bytes are memory address, 6th is dummy
 #define MEM_WRITE 0x38 //4PP on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
-#define MEM_PERFEN 0x00 //performance enhance mode is for repeated reads, not something we need here
 
 void tMSCLK(){
     digitalWrite(MEM_SCLK, HIGH);
@@ -70,8 +69,6 @@ void 4ioWriteByte(byte cmd){
     tMSCLK();
 }
 
-byte[256] bytesRead;
-
 void setup() {
 
     pinMode(MEM_SIO0, OUTPUT);
@@ -80,8 +77,6 @@ void setup() {
     pinMode(MEM_SIO3, OUTPUT);
     pinMode(MEM_SCLK, OUTPUT);
     pinMode(MEM_CS, OUTPUT);
-
-    bytesRead = new byte[256];
 
     digitalWrite(MEM_CS, HIGH);
     digitalWrite(MEM_IN, LOW);
@@ -110,7 +105,8 @@ private byte read_byte(){
     return outB;
 }
 
-byte* read_mem(byte[4] address, byte nBytes){
+int read_mem(byte[4] address, byte nBytes){
+    long memVal=0;
 
     digitalWrite(MEM_CS, LOW);
 
@@ -119,19 +115,19 @@ byte* read_mem(byte[4] address, byte nBytes){
     for(int i = 3; i >= 0; i--){
        4ioWriteByte(address[i]);
     }
-    4ioWriteByte(MEM_PERFEN);
+    4ioWriteByte(); //TODO: write whatever performance enhancement indicator is
     
-    for(int i = (-1); i>=0; i--){
+    for(int i = (/*TODO: dummy cycles*/-1); i>=0; i--){
         tMSCLK();
     }
 
     for(int i = nBytes-1; i>= 0; i--){
-        bytesRead[i] = (read_byte());
+        memVal.append(read_byte()); //TODO: figure out what datatype memVal should be (this is also the function return type), probably vector?
     }
 
     digitalWrite(MEM_CS, HIGH);
 
-    return bytesRead;
+    return memVal;
 }
 
 void write_mem(byte[4] address, byte* bytes, byte nBytes){

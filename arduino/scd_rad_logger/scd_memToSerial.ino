@@ -44,6 +44,8 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_READ 0xEB //4READ on datasheet, next 4 bytes are memory address, 6th is dummy
 #define MEM_WRITE 0x38 //4PP on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
 #define MEM_PERFEN 0x00 //performance enhance mode is for repeated reads, not something we need here
+#define MEM_DUMMYC 8
+
 
 void tMSCLK(){
     digitalWrite(MEM_SCLK, HIGH);
@@ -121,7 +123,7 @@ byte* read_mem(byte[4] address, byte nBytes){
     }
     4ioWriteByte(MEM_PERFEN);
     
-    for(int i = (-1); i>=0; i--){
+    for(int i = (MEM_DUMMYC); i>=0; i--){
         tMSCLK();
     }
 

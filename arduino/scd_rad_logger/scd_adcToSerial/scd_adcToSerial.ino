@@ -15,8 +15,8 @@
 
 #ifdef SPEXSAT_BOARD_MEGA
     #define ADC_DOUT 23 //This connects to the DOUT pin on the ADC
-    #define ADC_DIN 24
-    #define ADC_SCLK 25
+    #define ADC_DIN 38
+    #define ADC_SCLK 39
     #define ADC_CS 22
 #endif
 

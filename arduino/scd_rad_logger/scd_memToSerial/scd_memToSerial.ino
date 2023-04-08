@@ -25,9 +25,9 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #endif
 
 #ifdef SPEXSAT_BOARD_MEGA
-    #define MEM_SCLK 26
-    #define MEM_CS 27
-    #define MEM_SIO0 28
+    #define MEM_SCLK 32
+    #define MEM_CS 28
+    #define MEM_SIO0 33
     #define MEM_SIO1 29
     #define MEM_SIO2 30
     #define MEM_SIO3 31
@@ -112,7 +112,7 @@ private byte read_byte(){
     return outB;
 }
 
-byte* read_mem(byte[4] address, byte nBytes){
+byte* read_mem(byte[4] address, int nBytes){
 
     digitalWrite(MEM_CS, LOW);
 
@@ -136,7 +136,7 @@ byte* read_mem(byte[4] address, byte nBytes){
     return bytesRead;
 }
 
-void write_mem(byte[4] address, byte* bytes, byte nBytes){
+void write_mem(byte[4] address, byte* bytes, int nBytes){
     digitalWrite(MEM_CS, LOW);
 
     writeByte(MEM_WRITE);
@@ -151,10 +151,67 @@ void write_mem(byte[4] address, byte* bytes, byte nBytes){
     digitalWrite(MEM_CS, HIGH);
 }
 
+union intarr{
+    byte[4] array;
+    int integer;
+}
+int size = 0;
 void loop() {
 
-    Serial.println("Val: "+read_mem() + " Time: " + millis());
-
+    if(Serial.available() > 0):
+	switch(Serial.read()){
+	    case r:
+		byte[4] address;
+		for(int i = 0; i <=3; i++){
+		    address[i] = Serial.read();
+		}
+		intarr length;
+		for(int i = 0; i < 4; i++){
+		    length.array[i] = Serial.read();
+		}
+		byte returnType = Serial.read();
+		byte* retBytes = read_mem(address, length.integer);
+		
+		switch(returnType){
+		    case i:
+			intarr tempInt;
+			for(int i = 0, int j = 0; i <= length.integer; i++, j++){
+			    tempInt.array[j] = retBytes[i];
+			    if(j==3){
+				Serial.print(int(tempInt.integer));
+				j=0;
+				
+			    }
+			}
+			break;
+		    case c:
+			for(int i = 0; i < length.integer; i++){
+			    Serial.print(char(retBytes[i]));
+			}
+			break;
+		}
+	        break;
+	    case w:
+		byte[4] address;
+		for(int i = 0; i < 4; i++){
+		    address[i] = Serial.read();
+		}
+		intarr len;
+		for(int i = 0; i < 4; i++){
+		    len.array[i] = Serial.read();
+		}
+		byte* buffer = new byte[len.integer];
+		for(int i = 0; i < len.integer; i++){
+		    buffer[i] = Serial.read();
+		}
+		write_mem(address, buffer, len.integer);
+		size += len.integer;
+		break;
+	    case s:
+		Serial.print(size);
+		break;
+	}
+	Serial.println();
 }
 
 

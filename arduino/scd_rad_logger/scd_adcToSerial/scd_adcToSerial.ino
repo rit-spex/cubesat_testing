@@ -32,7 +32,7 @@ void setup() {
     pinMode(ADC_CS, OUTPUT);
 
     digitalWrite(ADC_CS, HIGH);
-    digitalWrite(ADC_IN, LOW);
+    digitalWrite(ADC_DIN, LOW);
     digitalWrite(ADC_SCLK, LOW);
 
     Serial.begin(9600);
@@ -40,7 +40,7 @@ void setup() {
 
 int read_adc(){
     long adcVal=0;
-    byte cmdBits=b00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
+    byte cmdBits=B00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
 
     digitalWrite(ADC_CS, LOW);
 
@@ -50,7 +50,7 @@ int read_adc(){
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
     }
-    int j = ADC_BITC-1
+    int j = ADC_BITC-1;
     for(int i = 3; i>= 0; i--, j--){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
         adcVal += digitalRead(ADC_DOUT)<<j;
@@ -71,9 +71,6 @@ int read_adc(){
 
 void loop() {
 
-    Serial.println("Val: "+read_adc() + " Time: " + millis());
+    Serial.println(String("Val: "+read_adc()) + " Time: " + millis());
 
 }
-
-
-

@@ -138,7 +138,7 @@ byte* read_mem(byte[4] address, int nBytes){
 
 void write_mem(byte[4] address, byte* bytes, int nBytes){
     digitalWrite(MEM_CS, LOW);
-
+    writeByte(MEM_WREN);
     writeByte(MEM_WRITE);
     for(int i = 3; i >=0; i--){
         4ioWriteByte(address[i]);
@@ -147,7 +147,8 @@ void write_mem(byte[4] address, byte* bytes, int nBytes){
     for(int i = nBytes; i>=0; i--){
         4ioWriteByte(bytes[i]);
     }
-
+    
+    writeByte(MEM_WRDI);
     digitalWrite(MEM_CS, HIGH);
 }
 

@@ -1,5 +1,5 @@
 #ifndef SPEXSAT_BAUD
-    #define SPEXSAT_BAUS 9600
+    #define SPEXSAT_BAUD 9600
 #endif
 
 #include <SPI.h>
@@ -35,7 +35,7 @@ void setup() {
     digitalWrite(ADC_DIN, LOW);
     digitalWrite(ADC_SCLK, LOW);
 
-    Serial.begin(9600);
+    Serial.begin(SPEXSAT_BAUD);
 }
 
 int read_adc(){
@@ -50,17 +50,18 @@ int read_adc(){
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
     }
+
     int j = ADC_BITC-1;
     for(int i = 3; i>= 0; i--, j--){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        adcVal += digitalRead(ADC_DOUT)<<j;
+        adcVal |= digitalRead(ADC_DOUT)<<j;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
     }
 
 
     for(; j>=0; j--){
-        adcVal += digitalRead(ADC_DOUT)<<j;
+        adcVal |= digitalRead(ADC_DOUT)<<j;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
     }

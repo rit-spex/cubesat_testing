@@ -55,6 +55,7 @@ int read_adc(){
     for(int i = 3; i>= 0; i--, j--){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
         adcVal |= digitalRead(ADC_DOUT)<<j;
+        Serial.println(adcVal);
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
     }

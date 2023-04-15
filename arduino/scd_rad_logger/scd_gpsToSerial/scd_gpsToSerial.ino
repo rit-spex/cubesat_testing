@@ -9,8 +9,8 @@
 #include <SPI.h>
 #include <SoftwareSerial.h>
 
-#define RXGPS 0
-#define TXGPS 1
+#define RXGPS 15
+#define TXGPS 14
 
 SoftwareSerial serialGPS = SoftwareSerial(RXGPS, TXGPS);
 String stringGPS = "";
@@ -18,7 +18,7 @@ String stringGPS = "";
 void setup() {
     pinMode(RXGPS, INPUT);
     pinMode(TXGPS, OUTPUT);
-  
+    while(!Serial){}
     Serial.begin(SPEXSAT_BAUD);
     Serial.println("Started");
 

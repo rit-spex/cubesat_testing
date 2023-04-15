@@ -59,7 +59,7 @@ void writeByte(byte cmd){
     }
 }
 
-void 4ioWriteByte(byte cmd){
+void quadIOWriteByte(byte cmd){
     digitalWrite(MEM_SIO0,cmd&1<<4);
     digitalWrite(MEM_SIO1,cmd&1<<5);
     digitalWrite(MEM_SIO2,cmd&1<<6);
@@ -91,7 +91,7 @@ void setup() {
     
     digitalWrite(MEM_CS, LOW);
     //enabling 4 byte addressing
-    writeCMD(MEM_EN4B);    
+    writeByte(MEM_EN4B);    
     digitalWrite(MEM_CS, HIGH);
 
     Serial.begin(9600);
@@ -112,16 +112,16 @@ private byte read_byte(){
     return outB;
 }
 
-byte* read_mem(byte[4] address, int nBytes){
+byte* read_mem(byte address[4], int nBytes){
 
     digitalWrite(MEM_CS, LOW);
 
     //writes command bits
     writeByte(MEM_READ);
     for(int i = 3; i >= 0; i--){
-       4ioWriteByte(address[i]);
+       quadIOWriteByte(address[i]);
     }
-    4ioWriteByte(MEM_PERFEN);
+    quadIOWriteByte(MEM_PERFEN);
     
     for(int i = (MEM_DUMMYC); i>=0; i--){
         tMSCLK();
@@ -136,16 +136,16 @@ byte* read_mem(byte[4] address, int nBytes){
     return bytesRead;
 }
 
-void write_mem(byte[4] address, byte* bytes, int nBytes){
+void write_mem(byte* address[4], byte* bytes, int nBytes){
     digitalWrite(MEM_CS, LOW);
     writeByte(MEM_WREN);
     writeByte(MEM_WRITE);
     for(int i = 3; i >=0; i--){
-        4ioWriteByte(address[i]);
+        quadIOWriteByte(address[i]);
     }
     
     for(int i = nBytes; i>=0; i--){
-        4ioWriteByte(bytes[i]);
+        quadIOWriteByte(bytes[i]);
     }
     
     writeByte(MEM_WRDI);
@@ -153,66 +153,79 @@ void write_mem(byte[4] address, byte* bytes, int nBytes){
 }
 
 union intarr{
-    byte[4] array;
+    byte array[4];
     int integer;
 }
 int size = 0;
+char readstring[265] = { '\0' };
+
 void loop() {
 
-    if(Serial.available() > 0):
-	switch(Serial.read()){
-	    case r:
-		byte[4] address;
-		for(int i = 0; i <=3; i++){
-		    address[i] = Serial.read();
-		}
-		intarr length;
-		for(int i = 0; i < 4; i++){
-		    length.array[i] = Serial.read();
-		}
-		byte returnType = Serial.read();
-		byte* retBytes = read_mem(address, length.integer);
-		
-		switch(returnType){
-		    case i:
-			intarr tempInt;
-			for(int i = 0, int j = 0; i <= length.integer; i++, j++){
-			    tempInt.array[j] = retBytes[i];
-			    if(j==3){
-				Serial.print(int(tempInt.integer));
-				j=0;
-				
-			    }
-			}
-			break;
-		    case c:
-			for(int i = 0; i < length.integer; i++){
-			    Serial.print(char(retBytes[i]));
-			}
-			break;
-		}
-	        break;
-	    case w:
-		byte[4] address;
-		for(int i = 0; i < 4; i++){
-		    address[i] = Serial.read();
-		}
-		intarr len;
-		for(int i = 0; i < 4; i++){
-		    len.array[i] = Serial.read();
-		}
-		byte* buffer = new byte[len.integer];
-		for(int i = 0; i < len.integer; i++){
-		    buffer[i] = Serial.read();
-		}
-		write_mem(address, buffer, len.integer);
-		size += len.integer;
-		break;
-	    case s:
-		Serial.print(size);
-		break;
-	}
-	Serial.println();
+    if(Serial.available() > 0){
+        readstring = Serial.readString();
+        //readstring.trim(); //removes \r or \n from end of string // not bothering with this for now, can't trim char[] as string
+        Serial.print("Read string: ");
+        Serial.println(readstring);
+        int l = 0;
+        switch(readstring[l]){
+            l++;
+            case 'r':
+                byte address[4];
+                for(int i = 0; i < 4;i++, l++){
+                    address[i] = readstring[l];
+                }
+                intarr length;
+                for(int i = 0; i < 4; i++, l++){
+                    length.array[i] = readstring[l];
+                }
+                byte returnType = readString[l];
+                byte* retBytes = read_mem(address, length.integer);
+                
+                switch(returnType){
+                    case 'i':
+                        intarr tempInt;
+                        for(int i = 0, int j = 0; i <= length.integer; i++, j++){
+                            tempInt.array[j] = retBytes[i];
+                            if(j==3){
+                            Serial.print(i/3);
+                            Serial.print(" integer: "
+                            Serial.println(int(tempInt.integer));
+                            j=0;
+                            
+                            }
+                        }
+                        break;
+                    case 'c':
+                        for(int i = 0; i < length.integer; i++){
+                            Serial.print(char(retBytes[i]));
+                        }
+                        break;
+                }
+                break;
+            case 'w':
+                byte address[4];
+                for(int i = 0; i < 4; i++, l++){
+                    address[i] = readstring[l];
+                }
+                intarr len;
+                for(int i = 0; i < 4; i++, l++){
+                    len.array[i] = readstring[l];
+                }
+                byte* buffer = new byte[len.integer];
+                for(int i = 0; i < len.integer; i++, l++){
+                    buffer[i] = readstring[l];
+                }
+                write_mem(address, buffer, len.integer);
+                delete(buffer);
+                size += len.integer;
+                break;
+            case 's':
+                Serial.print("Size = ")
+                Serial.print(size);
+                break;
+        }
+        Serial.println();
+    }
 }
 
 

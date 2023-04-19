@@ -40,12 +40,14 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_RDP 0xAB //release deep power down
 #define MEM_WREN 0x06 //write enable
 #define MEM_WRDI 0x04 //write disable
-#define MEM_SE 0x20 //sector erase
+#define MEM_CE 0x60 //chip erase
 #define MEM_READ 0xEB //4READ on datasheet, next 4 bytes are memory address, 6th is dummy
 #define MEM_WRITE 0x38 //4PP on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
+#define MEM_RDSR 0x05 //read status register
 #define MEM_PERFEN 0x00 //performance enhance mode is for repeated reads, not something we need here
-#define MEM_DUMMYC 8
+#define MEM_ENQIO 0x35
 
+#define MEM_DUMMYC 8
 
 void tMSCLK(){
     digitalWrite(MEM_SCLK, HIGH);
@@ -90,12 +92,22 @@ void setup() {
     digitalWrite(MEM_CS, LOW);
     //enabling 4 byte addressing
     writeByte(MEM_EN4B);    
+    writeByte(MEM_ENQIO);
     digitalWrite(MEM_CS, HIGH);
 
     Serial.begin(9600);
 }
 
+byte basic_read(){
+    byte out = 0;
+    for(int i = 7; i >= 0; i--){
+        out |= digitalRead(MEM_SIO1)<<i;
+    }
+    return out;
+}
+
 byte read_byte(){
+    //return basic_read();
     byte outB = 0;
     tMSCLK();
     outB |= digitalRead(MEM_SIO0)<<4;
@@ -113,18 +125,17 @@ byte read_byte(){
 byte* read_mem(byte address[4], int nBytes){
     byte bytesRead[256];
     digitalWrite(MEM_CS, LOW);
-
     //writes command bits
-    writeByte(MEM_READ);
+    quadIOWriteByte(MEM_READ);
     for(int i = 3; i >= 0; i--){
        quadIOWriteByte(address[i]);
     }
     quadIOWriteByte(MEM_PERFEN);
     
-    for(int i = (MEM_DUMMYC); i>=0; i--){
+    for(int i = 0; i<MEM_DUMMYC-1; i++){
         tMSCLK();
     }
-
+    Serial.println("Reading bytes");
     for(int i = nBytes-1; i>= 0; i--){
         bytesRead[i] = (read_byte());
     }
@@ -135,18 +146,22 @@ byte* read_mem(byte address[4], int nBytes){
 }
 
 void write_mem(byte address[4], byte* bytes, int nBytes){
+    Serial.print("Writing: ");
+    Serial.print("Length = ");
+    Serial.println(nBytes);
     digitalWrite(MEM_CS, LOW);
-    writeByte(MEM_WREN);
-    writeByte(MEM_WRITE);
+    quadIOWriteByte(MEM_WREN);
+    quadIOWriteByte(MEM_WRITE);
     for(int i = 3; i >=0; i--){
         quadIOWriteByte(address[i]);
     }
-    
+    Serial.println("Writing bytes");
     for(int i = nBytes; i>=0; i--){
+        Serial.println(bytes[i]);
         quadIOWriteByte(bytes[i]);
     }
     
-    writeByte(MEM_WRDI);
+    quadIOWriteByte(MEM_WRDI);
     digitalWrite(MEM_CS, HIGH);
 }
 
@@ -185,6 +200,7 @@ void loop() {
                 char returnType = readstring[l];
                 intArr T;
                 T.i = address.toInt();
+                Serial.print("address int: "); Serial.print(T.i); Serial.print(" length int: "); Serial.println(length.toInt());
                 byte* retBytes = (read_mem(T.a, length.toInt()));
                 
                 switch(returnType){
@@ -220,6 +236,13 @@ void loop() {
                         }
                         break;
                     }
+                    case 'b':
+                        {
+                        for(int i = 0; i < length.toInt(); i++){
+                            Serial.println((retBytes[i]));
+                        }
+                        break;
+                    }
                 }
                 break;
             }
@@ -250,7 +273,63 @@ void loop() {
             case 's':
                 {
                 Serial.print("Size = ");
-                Serial.print(size);
+                Serial.println(size);
+                byte b = 0;
+                digitalWrite(MEM_CS, LOW);
+                quadIOWriteByte(MEM_RDSR);
+                digitalWrite(MEM_CS, HIGH);
+                b = read_byte();
+                Serial.println(b, BIN);
+                /*do{
+                    digitalWrite(MEM_CS, LOW);
+                    quadIOWriteByte(MEM_WREN);
+                    digitalWrite(MEM_CS, HIGH);
+                    digitalWrite(MEM_CS, LOW);
+                    quadIOWriteByte(MEM_RDSR);
+                    digitalWrite(MEM_CS, HIGH);
+                    b = read_byte();
+                    Serial.print(b, BIN);
+                    Serial.print("| b && 0b10: ");
+                    Serial.println(b && 0b10);
+                  }while((b & 0b10) != 2);*/
+                quadIOWriteByte(MEM_RDSR);
+                b = 0;
+                b = read_byte();
+                digitalWrite(MEM_CS, HIGH);
+                Serial.println();
+                Serial.println(b, BIN);
+                break;
+            }
+            case 'c':
+                {
+                if(readstring[1] == 'y'){
+                  digitalWrite(MEM_CS, LOW);
+                  byte b = 0;
+                  do{
+                    writeByte(MEM_WREN);
+                    writeByte(MEM_RDSR);
+                    b = read_byte();
+                  }while(!(b && 0b1));
+                  writeByte(MEM_CE);
+                  Serial.println("Chip erased");
+                }
+                break;
+            }
+          case 'd':
+                {
+                if(readstring[1] == 'y'){
+                  digitalWrite(MEM_CS, LOW);
+                  quadIOWriteByte(0x66);
+                  digitalWrite(MEM_CS, HIGH);
+//                  wait(tSHSL);
+                  digitalWrite(MEM_CS, LOW);
+                  quadIOWriteByte(0x99);
+                  digitalWrite(MEM_CS, HIGH);
+                  digitalWrite(MEM_CS, LOW);
+                  quadIOWriteByte(0x66);
+                  digitalWrite(MEM_CS, HIGH);
+                  Serial.println("Chip reset");
+                }
                 break;
             }
         }

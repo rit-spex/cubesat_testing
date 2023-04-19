@@ -2,7 +2,7 @@
     #define SPEXSAT_BAUD 9600
 #endif
 
-#include <SPI.h>
+//#include <SPI.h>
 
 #define SPEXSAT_BOARD_MEGA
 
@@ -87,27 +87,44 @@ void setup() {
 
     digitalWrite(MEM_CS, HIGH);
     digitalWrite(MEM_SIO0, LOW);
+    digitalWrite(MEM_SIO1, LOW);
+    digitalWrite(MEM_SIO2, LOW);
+    digitalWrite(MEM_SIO3, LOW);
     digitalWrite(MEM_SCLK, LOW);
-    
+    delay(100);
     digitalWrite(MEM_CS, LOW);
     //enabling 4 byte addressing
     writeByte(MEM_EN4B);    
+    digitalWrite(MEM_CS, HIGH);
+
+    digitalWrite(MEM_CS, LOW);
+    writeByte(0x98);
+    digitalWrite(MEM_CS, HIGH);
+
+    digitalWrite(MEM_CS, LOW);
     writeByte(MEM_ENQIO);
     digitalWrite(MEM_CS, HIGH);
 
     Serial.begin(9600);
+
 }
 
 byte basic_read(){
     byte out = 0;
+    pinMode(MEM_SIO0, INPUT);
     for(int i = 7; i >= 0; i--){
         out |= digitalRead(MEM_SIO1)<<i;
     }
+    pinMode(MEM_SIO0, OUTPUT);
     return out;
 }
 
 byte read_byte(){
     //return basic_read();
+    pinMode(MEM_SIO0, INPUT);
+    pinMode(MEM_SIO1, INPUT);
+    pinMode(MEM_SIO2, INPUT);
+    pinMode(MEM_SIO3, INPUT);
     byte outB = 0;
     tMSCLK();
     outB |= digitalRead(MEM_SIO0)<<4;
@@ -119,6 +136,10 @@ byte read_byte(){
     outB |= digitalRead(MEM_SIO1)<<1;
     outB |= digitalRead(MEM_SIO2)<<2;
     outB |= digitalRead(MEM_SIO3)<<3;
+    pinMode(MEM_SIO0, OUTPUT);
+    pinMode(MEM_SIO1, OUTPUT);
+    pinMode(MEM_SIO2, OUTPUT);
+    pinMode(MEM_SIO3, OUTPUT);
     return outB;
 }
 
@@ -137,9 +158,13 @@ byte* read_mem(byte address[4], int nBytes){
     }
     Serial.println("Reading bytes");
     for(int i = nBytes-1; i>= 0; i--){
+      
         bytesRead[i] = (read_byte());
-    }
+        Serial.print(bytesRead[i]);
+        Serial.print(" ");
 
+    }
+    Serial.println();
     digitalWrite(MEM_CS, HIGH);
 
     return bytesRead;
@@ -150,7 +175,12 @@ void write_mem(byte address[4], byte* bytes, int nBytes){
     Serial.print("Length = ");
     Serial.println(nBytes);
     digitalWrite(MEM_CS, LOW);
+    delay(1);
     quadIOWriteByte(MEM_WREN);
+    delay(1);
+    digitalWrite(MEM_CS, HIGH);
+    delay(1);
+    digitalWrite(MEM_CS, LOW);
     quadIOWriteByte(MEM_WRITE);
     for(int i = 3; i >=0; i--){
         quadIOWriteByte(address[i]);
@@ -168,11 +198,14 @@ void write_mem(byte address[4], byte* bytes, int nBytes){
 int size = 0;
 String readstring;
 
-union intArr{
-  int i;
-  byte a[4];
-};
-
+byte* intToBytes(int a){
+  byte arr[4] = {0};
+  arr[0] = (a & 0xff);
+  arr[1] = ((a >> 8)& 0xff);
+  arr[2] = ((a>>16)&0xff);
+  arr[3] = ((a>>24)&0xff);
+  return arr;
+}
 
 void loop() {
 
@@ -198,19 +231,17 @@ void loop() {
                 }
                 Serial.println("Length: " + length);
                 char returnType = readstring[l];
-                intArr T;
-                T.i = address.toInt();
-                Serial.print("address int: "); Serial.print(T.i); Serial.print(" length int: "); Serial.println(length.toInt());
-                byte* retBytes = (read_mem(T.a, length.toInt()));
+                Serial.print("address int: "); Serial.print(address.toInt()); Serial.print(" length int: "); Serial.println(length.toInt());
+                byte* retBytes = (read_mem(intToBytes(address.toInt()), length.toInt()));
                 
                 switch(returnType){
-                    case 'i':
+                    /*case 'i':
                         {
                         Serial.println("return type i");
-                        intArr tempInt;
+                        byte tempInt[4];
                         int j = 0;
                         for(int i = 0; i <= length.toInt(); i++, j++){
-                            tempInt.a[j] = retBytes[i];
+                            //tempInt.a[j] = retBytes[i];
                             //Serial.println(tempInt.a[j]);
                             if(j==3){
                             Serial.print(i/3);
@@ -228,7 +259,7 @@ void loop() {
                             Serial.println(tempInt.i);
                         }
                         break;
-                    }
+                    }*/
                     case 'c':
                         {
                         for(int i = 0; i < length.toInt(); i++){
@@ -264,9 +295,7 @@ void loop() {
                     buffer[i] = readstring[l];
                 }
                 Serial.print("Writing to memory: ");
-                intArr T2;
-                T2.i = address.toInt();
-                write_mem(T2.a, buffer, length.toInt());
+                write_mem(intToBytes(address.toInt()), buffer, length.toInt());
                 size += length.toInt();
                 break;
             }
@@ -321,7 +350,7 @@ void loop() {
                   digitalWrite(MEM_CS, LOW);
                   quadIOWriteByte(0x66);
                   digitalWrite(MEM_CS, HIGH);
-//                  wait(tSHSL);
+                  //wait(tSHSL);
                   digitalWrite(MEM_CS, LOW);
                   quadIOWriteByte(0x99);
                   digitalWrite(MEM_CS, HIGH);

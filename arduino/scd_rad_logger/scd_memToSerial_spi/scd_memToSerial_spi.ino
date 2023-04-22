@@ -33,7 +33,7 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_SIO3 31
 #endif
 
-#define MEM_EN4B 0xB7
+#define MEM_EN4B 0xB7    //enables 4 byte addressing
 #define MEM_SUS 0xB0     //suspends current program/erase
 #define MEM_RES 0x30     //resumes suspended program/erase
 #define MEM_DP 0xB9      //deep power down
@@ -41,8 +41,8 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 #define MEM_WREN 0x06    //write enable
 #define MEM_WRDI 0x04    //write disable
 #define MEM_CE 0x60      //chip erase
-#define MEM_READ 0xEB    //4READ on datasheet, next 4 bytes are memory address, 6th is dummy
-#define MEM_WRITE 0x38   //4PP on datasheet, next 4 bytes are memory addredd, followed by 1-256 data cycles
+#define MEM_READ 0x03    //READ on datasheet, next 4 bytes are memory address
+#define MEM_WRITE 0x02   //PP on datasheet, next 4 bytes are memory address, followed by 1-256 data cycles
 #define MEM_RDSR 0x05    //read status register
 #define MEM_PERFEN 0x00  //performance enhance mode is for repeated reads, not something we need here
 #define MEM_ENQIO 0x35
@@ -56,7 +56,7 @@ void setup() {
   pinMode(MEM_CS, OUTPUT);  
   digitalWrite(MEM_CS, LOW);   
   SPI.begin();
-
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0)); //initializing spi.h
   //enabling 4 byte addressing
   SPI.transfer(MEM_EN4B);
 
@@ -66,7 +66,7 @@ void setup() {
 }
 
 
-byte* read_mem(byte address[4], int nBytes) {
+byte* read_mem(byte address[4], int nBytes) { //read nBytes from memory address address
   byte bytesRead[256];
   digitalWrite(MEM_CS, LOW);
   //writes command bits
@@ -88,7 +88,7 @@ byte* read_mem(byte address[4], int nBytes) {
   return bytesRead;
 }
 
-void write_mem(byte address[4], byte* bytes, int nBytes) {
+void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte array bytes, of length nBytes to address
   Serial.print("Writing: ");
   Serial.print("Length = ");
   Serial.println(nBytes);
@@ -139,18 +139,30 @@ void write_mem(byte address[4], byte* bytes, int nBytes) {
 int size = 0;
 String readstring;
 
-byte* intToBytes(int a) {
+byte* intToBytes(int a) { //convert int to little endian byte array 
   byte arr[4] = { 0 };
-  arr[3] = (a & 0xff);
-  arr[2] = ((a >> 8) & 0xff);
-  arr[1] = ((a >> 16) & 0xff);
-  arr[0] = ((a >> 24) & 0xff);
+  arr[0] = (a & 0xff);
+  arr[1] = ((a >> 8) & 0xff);
+  arr[2] = ((a >> 16) & 0xff);
+  arr[3] = ((a >> 24) & 0xff);
   return arr;
 }
+/* input string formatting:
+read: rxxxxyyyym
+    xxxx = numerical value address
+    yyyy = numerical value length
+    m = read type, c for character or b for byte
+write: wxxxxyyyym*
+    xxxx = numerical value address
+    yyyy = numerical value length: max = 0256
+    m* = string to write, 1-256 long
+
+clear: cy
+*/
 
 void loop() {
 
-  if (Serial.available() > 0) {
+  if (Serial.available() > 0) { //wait until there's available data in serial
     readstring = Serial.readString();
     //readstring.trim(); //removes \r or \n from end of string // not bothering with this for now, can't trim char[] as string
     Serial.print("Read string: ");

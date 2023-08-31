@@ -38,6 +38,7 @@ void setup() {
     // GPS Setup
     #if SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
     Serial3.begin(SPEXGPS_BAUD);
+    #endif
     //digitalWrite(TXGPS, HIGH);
 }
 

@@ -1,19 +1,26 @@
+#ifndef SPEXSAT_BOARD_MEGA
+    #define SPEXSAT_BOARD_MEGA 0
+#endif
+#ifndef SPEXSAT_BOARD_UNO
+    #define SPEXSAT_BOARD_UNO 1
+#endif
+
 #ifndef SPEXSAT_BAUD
     #define SPEXSAT_BAUD 9600
 #endif
 
 #include <SPI.h>
 
-#define SPEXSAT_BOARD_MEGA
+#ifndef SPEXSAT_BOARD
+    #define SPEXSAT_BOARD_MEGA
+#endif
 
-#ifdef SPEXSAT_BOARD_UNO
+#if SPEXSAT_BOARD == SPEXSAT_BOARD_UNO
     #define ADC_DOUT 11 //This connects to the DOUT pin on the ADC
     #define ADC_DIN 12
     #define ADC_SCLK 13
     #define ADC_CS 10
-#endif
-
-#ifdef SPEXSAT_BOARD_MEGA
+#elif SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
     #define ADC_DOUT 23 //This connects to the DOUT pin on the ADC
     #define ADC_DIN 38
     #define ADC_SCLK 39
@@ -40,6 +47,7 @@ void setup() {
 
 int read_adc(){
     long adcVal=0;
+    long curADC=0;
     byte cmdBits=B00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
 
     digitalWrite(ADC_CS, LOW);
@@ -49,32 +57,49 @@ int read_adc(){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
+        //delay(1);
     }
 
     int j = ADC_BITC-1;
     for(int i = 3; i>= 0; i--, j--){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        adcVal |= digitalRead(ADC_DOUT)<<j;
+        curADC = digitalRead(ADC_DOUT)<<j;
+        Serial.print(curADC >> j);
+        adcVal |= curADC;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
+        
     }
 
 
     for(; j>=0; j--){
-        adcVal |= digitalRead(ADC_DOUT)<<j;
+        curADC = digitalRead(ADC_DOUT)<<j;
+        Serial.print(curADC >> j);
+        adcVal |= curADC;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
+        delay(1);
     }
     digitalWrite(ADC_CS, HIGH);
-
+    Serial.print(" | ");
     return adcVal;
 }
-
+//This is for testing the function, comment it out when including somewhere else
+#define SPEXSAT_TESTING_ADC
+#ifdef SPEXSAT_TESTING_ADC
+float sum = 0;
 void loop() {
-
-    Serial.print("Val: ");
-    Serial.print(read_adc());
-    Serial.print(" Time: ");
-    Serial.println(millis());
-
+  Serial.println(read_adc());
+    /*sum = 0;
+    Serial.print(" Start Time: ");
+    Serial.print(millis());
+    for(int i = 0; i < 1000; i++){
+      sum += read_adc();
+      delay(1);
+    }
+    Serial.print(" End Time: ");
+    Serial.print(millis());
+    Serial.print(" Val: ");
+    Serial.println(sum/1000);*/
 }
+#endif

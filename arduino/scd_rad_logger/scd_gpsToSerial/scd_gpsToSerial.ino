@@ -1,3 +1,14 @@
+#ifndef SPEXSAT_BOARD_MEGA
+#define SPEXSAT_BOARD_MEGA 0
+#endif
+#ifndef SPEXSAT_BOARD_UNO
+#define SPEXSAT_BOARD_UNO 1
+#endif
+
+#ifndef SPEXSAT_BOARD
+#define SPEXSAT_BOARD SPEXSAT_BOARD_MEGA
+#endif
+
 #ifndef SPEXSAT_BAUD
 #define SPEXSAT_BAUD 9600
 #endif
@@ -6,34 +17,32 @@
 #define SPEXGPS_BAUD 4800
 #endif
 
-#include <SPI.h>
-#include <SoftwareSerial.h>
+//#include <SPI.h>
+//#include <SoftwareSerial.h>
 
-#define RXGPS 0
-#define TXGPS 1
+#if SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
+#define RXGPS 15
+#define TXGPS 14
+#endif
 
-SoftwareSerial serialGPS = SoftwareSerial(RXGPS, TXGPS);
+//SoftwareSerial serialGPS = SoftwareSerial(RXGPS, TXGPS);
 String stringGPS = "";
 
 void setup() {
-    pinMode(RXGPS, INPUT);
-    pinMode(TXGPS, OUTPUT);
+  //  pinMode(RXGPS, INPUT);
+  //  pinMode(TXGPS, OUTPUT);
   
     Serial.begin(SPEXSAT_BAUD);
     Serial.println("Started");
 
     // GPS Setup
-    serialGPS.begin(SPEXGPS_BAUD);
-    digitalWrite(TXGPS, HIGH);
-
-    // Cut first gibberish (idk why we need this but it was in the template)
-    while (serialGPS.available()) 
-        if (serialGPS.read() == '\r')
-            break;
+    #if SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
+    Serial3.begin(SPEXGPS_BAUD);
+    //digitalWrite(TXGPS, HIGH);
 }
 
 void loop() {
-    if (serialGPS.available()) {
-        Serial.println(serialGPS.read());
+    if (Serial3.available()) {
+        Serial.println(Serial3.read());
     }
 }

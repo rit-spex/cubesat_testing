@@ -4,7 +4,17 @@
 
 #include <SPI.h>
 
-#define SPEXSAT_BOARD_MEGA
+#ifndef SPEXSAT_BOARD_MEGA
+#define SPEXSAT_BOARD_MEGA 0
+#endif
+
+#ifndef SPEXSAT_BOARD_UNO
+#define SPEXSAT_BOARD_UNO 1
+#endif
+
+#ifndef SPEXSAT_BOARD
+#define SPEXSAT_BOARD SPEXSAT_BOARD_MEGA
+#endif
 
 /*
 PIN SETUP FOR ELECTRICAL PEOPLE
@@ -15,16 +25,15 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 
 */
 
-#ifdef SPEXSAT_BOARD_UNO
+#if SPEXSAT_BOARD == SPEXSAT_BOARD_UNO
 #define MEM_CS 9
 #define MEM_SCLK 8
 #define MEM_SIO0 7
 #define MEM_SIO1 6
 #define MEM_SIO2 5
 #define MEM_SIO3 4
-#endif
 
-#ifdef SPEXSAT_BOARD_MEGA
+#elif SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
 #define MEM_SCLK 52
 #define MEM_CS 53
 #define MEM_SIO0 51
@@ -52,7 +61,10 @@ PIN SETUP FOR ELECTRICAL PEOPLE
 byte bytesRead[256];
 
 void setup() {
-
+  pinMode(MEM_SIO3, OUTPUT);
+  digitalWrite(MEM_SIO3, HIGH);
+  //pinMode(MEM_SIO2, OUTPUT);
+  //digitalWrite(MEM_SIO2, HIGH);
   pinMode(MEM_CS, OUTPUT);  
   digitalWrite(MEM_CS, LOW);   
   SPI.begin();
@@ -102,8 +114,8 @@ void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte arra
     SPI.transfer(MEM_RDSR);
     a = SPI.transfer(0x00);
     digitalWrite(MEM_CS, HIGH);
-    Serial.print(a); Serial.print("  ");
-  } while((a >> 1) & 0x01);
+    Serial.print(a, BIN); Serial.print("  ");
+  } while(!((a >> 1) & 0x01));
   Serial.println();
   
   digitalWrite(MEM_CS, LOW);
@@ -129,8 +141,8 @@ void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte arra
   do{  //While the write in progress bit in the status register == 1, wait for write to complete
     a = SPI.transfer(0x00);
     delay(5);
-    Serial.print(a); Serial.print("  ");
-  } while(a & 0x01);
+    Serial.print(a, BIN); Serial.print("  ");
+  } while(!(a & 0x01));
   digitalWrite(MEM_CS, HIGH);
   Serial.println();
 
@@ -219,14 +231,14 @@ void loop() {
             case 'c':
               {
                 for (int i = 0; i < length.toInt(); i++) {
-                  Serial.print(char(retBytes[i]));
+                  //Serial.print(char(retBytes[i]));
                 }
                 break;
               }
             case 'b':
               {
                 for (int i = 0; i < length.toInt(); i++) {
-                  Serial.println((retBytes[i]));
+                  //Serial.println((retBytes[i]));
                 }
                 break;
               }
@@ -285,8 +297,8 @@ void loop() {
               SPI.transfer(MEM_RDSR);
               b = SPI.transfer(0x00);
               digitalWrite(MEM_CS, HIGH);
-              Serial.print(b); Serial.print("  ");
-            } while((b >> 1) & 0x01);
+              Serial.print(b, BIN); Serial.print("  ");
+            } while(!((b >> 1) & 0x01));
             Serial.println();
             digitalWrite(MEM_CS, LOW);            
             SPI.transfer(MEM_CE);
@@ -296,8 +308,8 @@ void loop() {
             do{  //While the write in progress bit in the status register == 1, wait for erase to complete
               b = SPI.transfer(0x00);
               delay(5);
-              Serial.print(b); Serial.print("  ");
-            } while(b & 0x01);            
+              Serial.print(b, BIN); Serial.print("  ");
+            } while(!(b & 0x01));
             Serial.println();
 
             Serial.println("Chip erased");

@@ -19,6 +19,7 @@
 
 //#include <SPI.h>
 //#include <SoftwareSerial.h>
+#include <TinyGPSPlus.h>
 
 #if SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
 #define RXGPS 15
@@ -27,7 +28,7 @@
 
 //SoftwareSerial serialGPS = SoftwareSerial(RXGPS, TXGPS);
 String stringGPS = "";
-
+TinyGPSPlus gps;
 void setup() {
   //  pinMode(RXGPS, INPUT);
   //  pinMode(TXGPS, OUTPUT);
@@ -43,7 +44,41 @@ void setup() {
 }
 
 void loop() {
-    if (Serial3.available()) {
-        Serial.println(Serial3.read());
+  if(Serial3.available()){
+    while (Serial3.available()) {
+        Serial.print((char)(Serial3.read()+48));
     }
+    Serial.println();
+  }
 }
+    /*
+    while(Serial3.available()){ // check for gps data
+    if(gps.encode(Serial3.read()))// encode gps data
+    { 
+    
+    //Latitude
+    Serial.print("Latitude: ");
+    Serial.println(gps.location.lat(),6);
+    
+    //Longitude
+    Serial.print("Longitude: ");
+    Serial.println(gps.location.lng(),6); 
+
+    //Altitude
+    Serial.print("Altitude: "); 
+    Serial.println(gps.altitude.feet());
+
+    //Speed
+    Serial.print("Speed: "); 
+    Serial.println(gps.speed.mph());
+
+    // Number of satellites connected
+    Serial.print("Number of Sats connected: "); 
+    Serial.println(gps.satellites.value());
+
+    delay(2000);
+    
+   }
+  }
+}
+//*/

@@ -12,7 +12,7 @@
 #include <SPI.h>
 
 #ifndef SPEXSAT_BOARD
-    #define SPEXSAT_BOARD_MEGA
+    #define SPEXSAT_BOARD SPEXSAT_BOARD_MEGA
 #endif
 
 #if SPEXSAT_BOARD == SPEXSAT_BOARD_UNO
@@ -31,7 +31,7 @@
 #define ADC_CHANNEL_BYTE 0//0 = channel 1, 1 = channel 2
 #define ADC_CHB_LOC 3
 
-void setup() {
+void setup_adc() {
 
     pinMode(ADC_DIN, OUTPUT);
     pinMode(ADC_DOUT, INPUT);
@@ -64,7 +64,9 @@ int read_adc(){
     for(int i = 3; i>= 0; i--, j--){
         digitalWrite(ADC_DIN, cmdBits & 1<<i);
         curADC = digitalRead(ADC_DOUT)<<j;
+        #ifdef SPEXSAT_DEBUG
         Serial.print(curADC >> j);
+        #endif
         adcVal |= curADC;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
@@ -74,19 +76,26 @@ int read_adc(){
 
     for(; j>=0; j--){
         curADC = digitalRead(ADC_DOUT)<<j;
+        #ifdef SPEXSAT_DEBUG
         Serial.print(curADC >> j);
+        #endif
         adcVal |= curADC;
         digitalWrite(ADC_SCLK, HIGH);
         digitalWrite(ADC_SCLK, LOW);
         delay(1);
     }
     digitalWrite(ADC_CS, HIGH);
+    #ifdef SPEXSAT_DEBUG
     Serial.print(" | ");
+    #endif
     return adcVal;
 }
 //This is for testing the function, comment it out when including somewhere else
 #define SPEXSAT_TESTING_ADC
 #ifdef SPEXSAT_TESTING_ADC
+void setup(){
+  setup_adc();
+}
 float sum = 0;
 void loop() {
   Serial.println(read_adc());

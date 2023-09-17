@@ -87,7 +87,11 @@ byte* read_mem(byte address[4], int nBytes) { //read nBytes from memory address 
     SPI.transfer(address[i]);
   }
 
-  Serial.println("Reading bytes");
+  Serial.println("Reading bytes"); Serial.print("Address = "); 
+  for(int i = 0; i < 4; i++){
+    Serial.print(address[i]); Serial.print(" ");
+  }
+  Serial.println();
   for (int i = nBytes - 1; i >= 0; i--) {
 
     bytesRead[i] = SPI.transfer(0x00);
@@ -104,6 +108,11 @@ void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte arra
   Serial.print("Writing: ");
   Serial.print("Length = ");
   Serial.println(nBytes);
+  Serial.print("Address = "); 
+  for(int i = 0; i < 4; i++){
+    Serial.print(address[i]); Serial.print(" ");
+  }
+  Serial.println();
   byte a = 0;  
   do{  //While the write enable bit in the status register != 1, try to enable it
     digitalWrite(MEM_CS, LOW);
@@ -125,11 +134,10 @@ void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte arra
     SPI.transfer(address[i]);
   }
 
-  Serial.println("Writing bytes");
+  Serial.print("Writing "); Serial.print(nBytes); Serial.println(" bytes.");
   
-  for (int i = nBytes; i >= 0; i--) {
-    Serial.print(bytes[i]);
-    Serial.print("  ");
+  for (int i = nBytes-1; i >= 0; i--) {
+    Serial.print(bytes[i]); Serial.print(" | i = "); Serial.print(i); Serial.print("  |  ");
     SPI.transfer(bytes[i]);
   }
   Serial.println();
@@ -138,11 +146,13 @@ void write_mem(byte address[4], byte* bytes, int nBytes) { //write the byte arra
   a=0;
   digitalWrite(MEM_CS, LOW);
   SPI.transfer(MEM_RDSR);
+  Serial.println("Waiting for write in progress != 1");
+  delay(1);
   do{  //While the write in progress bit in the status register == 1, wait for write to complete
     a = SPI.transfer(0x00);
     delay(5);
     Serial.print(a, BIN); Serial.print("  ");
-  } while(!(a & 0x01));
+  } while((a & 0x01));
   digitalWrite(MEM_CS, HIGH);
   Serial.println();
 
@@ -173,7 +183,7 @@ clear: cy
 */
 
 void loop() {
-
+  
   if (Serial.available() > 0) { //wait until there's available data in serial
     readstring = Serial.readString();
     //readstring.trim(); //removes \r or \n from end of string // not bothering with this for now, can't trim char[] as string
@@ -247,6 +257,19 @@ void loop() {
         }
       case 'w':
         {
+          byte b = 0;
+          Serial.println("Waiting for write enable.");
+          do{  //While the write enable bit in the status register != 1, try to enable it
+            digitalWrite(MEM_CS, LOW);
+            SPI.transfer(MEM_WREN);
+            digitalWrite(MEM_CS, HIGH);
+            
+            digitalWrite(MEM_CS, LOW);
+            SPI.transfer(MEM_RDSR);
+            b = SPI.transfer(0x00);
+            digitalWrite(MEM_CS, HIGH);
+            Serial.print(b, BIN); Serial.print("  ");
+          } while(!((b >> 1) & 0x01));
           address = "";
           byte buffer[256];
           Serial.println("Writing");
@@ -264,6 +287,7 @@ void loop() {
           }
           Serial.print("Writing to memory: ");
           write_mem(intToBytes(address.toInt()), buffer, length.toInt());
+          
           size += length.toInt();
           break;
         }
@@ -308,7 +332,7 @@ void loop() {
             do{  //While the write in progress bit in the status register == 1, wait for erase to complete
               b = SPI.transfer(0x00);
               delay(5);
-              Serial.print(b, BIN); Serial.print("  ");
+              Serial.println(b, BIN); 
             } while(!(b & 0x01));
             Serial.println();
 

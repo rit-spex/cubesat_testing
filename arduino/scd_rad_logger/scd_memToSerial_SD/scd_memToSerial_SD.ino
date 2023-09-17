@@ -38,3 +38,19 @@ void write_SD_line(void* data_arr, unsigned int array_len) {
     dataCSV.println();
     dataCSV.close();
 }
+
+void setup(){
+    setup_SD();
+}
+
+void loop(void){
+    for(int i = 0; i < 10; i++){
+        char* l = "Data line: ";
+        char* p = " test.";
+        int j = i;
+        void* arr[3] = {l, &j, p};
+        write_SD_line(arr, 3);
+    }
+    while(1);
+}
+

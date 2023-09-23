@@ -16,15 +16,15 @@
 #endif
 
 #if SPEXSAT_BOARD == SPEXSAT_BOARD_UNO
-    #define ADC_DOUT 11 //This connects to the DOUT pin on the ADC
-    #define ADC_DIN 12
-    #define ADC_SCLK 13
+    #define DOUT 11 //This connects to the DOUT pin on the ADC
+    #define DIN 12
+    #define SCLK 13
     #define ADC_CS 10
 #elif SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
-    #define ADC_DOUT 23 //This connects to the DOUT pin on the ADC
-    #define ADC_DIN 38
-    #define ADC_SCLK 39
-    #define ADC_CS 22
+    #define SDI 50 //This connects to the DOUT pin on the ADC
+    #define SDO 51
+    #define SCLK 52
+    #define ADC_CS 53
 #endif
 
 #define ADC_BITC 12
@@ -33,59 +33,29 @@
 
 void setup_adc() {
 
-    pinMode(ADC_DIN, OUTPUT);
-    pinMode(ADC_DOUT, INPUT);
-    pinMode(ADC_SCLK, OUTPUT);
-    pinMode(ADC_CS, OUTPUT);
-
-    digitalWrite(ADC_CS, HIGH);
-    digitalWrite(ADC_DIN, LOW);
-    digitalWrite(ADC_SCLK, LOW);
-
     Serial.begin(SPEXSAT_BAUD);
 }
 
 int read_adc(){
-    long adcVal=0;
+    uint16_t adcVal=0;
     long curADC=0;
     byte cmdBits=B00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
 
+	SPI.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0)); //TODO: double check SPI settings
     digitalWrite(ADC_CS, LOW);
+	byte adcVal_A = 0;
+	byte adcVal_B = 0;
+	adcVal_A = SPI.transfer(cmdBits);
+	adcVal_B = SPI.transfer(0x00);
 
-    //writes command bits
-    for(int i = 7; i>=4; i--){
-        digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        //delay(1);
-    }
+	adcVal = (adcVal_A << 8) | adcVal_B; 	
 
-    int j = ADC_BITC-1;
-    for(int i = 3; i>= 0; i--, j--){
-        digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        curADC = digitalRead(ADC_DOUT)<<j;
-        #ifdef SPEXSAT_DEBUG
-        Serial.print(curADC >> j);
-        #endif
-        adcVal |= curADC;
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        
-    }
-
-
-    for(; j>=0; j--){
-        curADC = digitalRead(ADC_DOUT)<<j;
-        #ifdef SPEXSAT_DEBUG
-        Serial.print(curADC >> j);
-        #endif
-        adcVal |= curADC;
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        delay(1);
-    }
     digitalWrite(ADC_CS, HIGH);
+	SPI.endTransaction();
     #ifdef SPEXSAT_DEBUG
+	Serial.print(adcVal_A);
+	Serial.print(", ");
+	Serial.print(adcVal_B);
     Serial.print(" | ");
     #endif
     return adcVal;

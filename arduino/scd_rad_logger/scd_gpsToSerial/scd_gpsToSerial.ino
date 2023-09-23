@@ -38,22 +38,22 @@ void setup() {
 
     // GPS Setup
     #if SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
-    Serial3.begin(SPEXGPS_BAUD);
+    Serial2.begin(SPEXGPS_BAUD);
     #endif
     //digitalWrite(TXGPS, HIGH);
 }
 
 void loop() {
-  if(Serial3.available()){
-    while (Serial3.available()) {
-        Serial.print((char)(Serial3.read()+48));
+  if(Serial2.available()){
+    while (Serial2.available()) {
+        Serial.write((Serial2.read()));
     }
     Serial.println();
   }
 }
     /*
-    while(Serial3.available()){ // check for gps data
-    if(gps.encode(Serial3.read()))// encode gps data
+    while(Serial2.available()){ // check for gps data
+    if(gps.encode(Serial2.read()))// encode gps data
     { 
     
     //Latitude

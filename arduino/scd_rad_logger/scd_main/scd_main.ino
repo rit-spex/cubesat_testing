@@ -1,3 +1,4 @@
+//#define SPEXSAT_DEV_MODE
 
 #ifndef SPEXSAT_BOARD_MEGA
     #define SPEXSAT_BOARD_MEGA 0
@@ -11,11 +12,12 @@
 #endif
 
 #ifndef SPEXGPS_BAUD
-#define SPEXGPS_BAUD 4800
+    #define SPEXGPS_BAUD 9600
 #endif
 
 #include <SPI.h>
-
+#include <SD.h>
+#include <TinyGPSPlus.h>
 #ifndef SPEXSAT_BOARD
     #define SPEXSAT_BOARD SPEXSAT_BOARD_MEGA
 #endif
@@ -26,81 +28,113 @@
     #define ADC_SCLK 13
     #define ADC_CS 10
 #elif SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
-    #define ADC_DOUT 23 //This connects to the DOUT pin on the ADC
-    #define ADC_DIN 38
-    #define ADC_SCLK 39
-    #define ADC_CS 22
-    #define RXGPS 15
-    #define TXGPS 14
+    #define SD_CS_PIN 53
 #endif
 
 #define ADC_BITC 12
 #define ADC_CHANNEL_BYTE 0//0 = channel 1, 1 = channel 2
 #define ADC_CHB_LOC 3
 
-void setup_adc() {
+TinyGPSPlus gps;
+unsigned long t_plus = 0;
+RawDegrees gps_lat;
+RawDegrees gps_lon;
+uint32_t gps_t = 0;
+double gps_alt = 0;
+double gps_spd = 0;
+uint32_t gps_sats = 0;
+uint32_t adc_val = 0;
+File dataCSV;
 
-    pinMode(ADC_DIN, OUTPUT);
-    pinMode(ADC_DOUT, INPUT);
-    pinMode(ADC_SCLK, OUTPUT);
-    pinMode(ADC_CS, OUTPUT);
-
-    digitalWrite(ADC_CS, HIGH);
-    digitalWrite(ADC_DIN, LOW);
-    digitalWrite(ADC_SCLK, LOW);
-
-    Serial.begin(SPEXSAT_BAUD);
+void setup(){
+    // SD Setup
+    while(!SD.begin(SD_CS_PIN));
+    // GPS Setup
+    Serial2.begin(SPEXGPS_BAUD);    
 }
 
 int read_adc(){
-    long adcVal=0;
-    long curADC=0;
-    byte cmdBits=B00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
-
-    digitalWrite(ADC_CS, LOW);
-
-    //writes command bits
-    for(int i = 7; i>=4; i--){
-        digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        //delay(1);
-    }
-
-    int j = ADC_BITC-1;
-    for(int i = 3; i>= 0; i--, j--){
-        digitalWrite(ADC_DIN, cmdBits & 1<<i);
-        curADC = digitalRead(ADC_DOUT)<<j;
-        #ifdef SPEXSAT_DEBUG
-        Serial.print(curADC >> j);
-        #endif
-        adcVal |= curADC;
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        
-    }
-
-
-    for(; j>=0; j--){
-        curADC = digitalRead(ADC_DOUT)<<j;
-        #ifdef SPEXSAT_DEBUG
-        Serial.print(curADC >> j);
-        #endif
-        adcVal |= curADC;
-        digitalWrite(ADC_SCLK, HIGH);
-        digitalWrite(ADC_SCLK, LOW);
-        delay(1);
-    }
-    digitalWrite(ADC_CS, HIGH);
-    #ifdef SPEXSAT_DEBUG
-    Serial.print(" | ");
-    #endif
-    return adcVal;
+    //TODO: implement ADC reading
+    adc_val = 0;
 }
-void setup(){
-  setup_adc();
+
+void read_gps(){
+    if(Serial2.available()){ //Check if GPS data exists
+        while(Serial2.available()){
+            if(gps.encode(Serial2.read())){
+                gps_lat = gps.location.rawLat();
+                gps_lon = gps.location.rawLng();
+                gps_t = gps.time.value();
+                gps_alt = gps.altitude.meters();
+                gps_spd = gps.speed.mps();
+                gps_sats = gps.satellites.value();
+            }
+        }
+    }
+}
+
+void save_all_vals(){
+    dataCSV = SD.open("data.csv", FILE_WRITE);
+    dataCSV.print(t_plus);
+    dataCSV.print(',');
+    dataCSV.print(adc_val);
+    dataCSV.print(',');
+    if(gps_lon.negative){
+        dataCSV.print('-');
+    }
+    else{
+        dataCSV.print('+');
+    }
+    dataCSV.print(gps_lon.deg);
+    dataCSV.print('|');
+    dataCSV.print(gps_lon.billionths);
+    dataCSV.print(',');
+    if(gps_lat.negative){
+        dataCSV.print('-');
+    }
+    else{
+        dataCSV.print('+');
+    }
+    dataCSV.print(gps_lat.deg);
+    dataCSV.print('|');
+    dataCSV.print(gps_lat.billionths);
+    dataCSV.print(',');
+    dataCSV.print(gps_t);
+    dataCSV.print(',');
+    dataCSV.print(gps_alt);
+    dataCSV.print(',');
+    dataCSV.print(gps_spd);
+    dataCSV.print(',');
+    dataCSV.print(gps_sats);
+    //dataCSV.print(',&');
+    //dataCSV.print(sum_all_vals());
+    dataCSV.println();
+    dataCSV.close();
+}
+
+uint32_t sum_all_vals(){
+  uint32_t sum = gps_sats + gps_t + t_plus + adc_val;
+  double dsum = gps_alt + gps_spd;
+  sum += (uint32_t)dsum;
+  if(gps_lat.negative){
+    sum -= (gps_lat.deg + gps_lat.billionths);
+  }
+  else{
+    sum += (gps_lat.deg + gps_lat.billionths);
+  }
+  if(gps_lon.negative){
+    sum -= (gps_lon.deg + gps_lon.billionths);
+  }
+  else{
+    sum += (gps_lon.deg + gps_lon.billionths);
+  }
+  return sum;
 }
 
 void loop() {
-  int adc_val = (read_adc());
+    t_plus = millis();
+    read_adc();
+    read_gps();
+    save_all_vals();
+    while(millis()-100 < t_plus);
 }

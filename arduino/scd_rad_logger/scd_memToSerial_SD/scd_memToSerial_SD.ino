@@ -28,12 +28,13 @@ void setup_SD(){
     while(!SD.begin(SD_CS_PIN));
 }
 
-void write_SD_line(void* data_arr, unsigned int array_len) {
+void write_SD_line(String* data_arr, int array_len) {
     dataCSV = SD.open("data.csv", FILE_WRITE);
     for(int i = 0; i < array_len; i++){
         dataCSV.print(*(data_arr+i));
         if(i != array_len -1){
             dataCSV.print(',');
+        }
     }
     dataCSV.println();
     dataCSV.close();
@@ -43,14 +44,21 @@ void setup(){
     setup_SD();
 }
 
-void loop(void){
+void loop(){
     for(int i = 0; i < 10; i++){
-        char* l = "Data line: ";
-        char* p = " test.";
-        int j = i;
-        void* arr[3] = {l, &j, p};
-        write_SD_line(arr, 3);
+        String l = "Data line: ";
+        String p = " test.";
+        String j = String(i);
+        String data[3] = {l, p, j};
+        write_SD_line(data, 3);
     }
+    Serial.begin(9600);   
+    Serial.println("Reading File:");
+    dataCSV = SD.open("data.csv", FILE_READ);
+    while(dataCSV.available()){
+        Serial.write(dataCSV.read());
+    }
+    dataCSV.close();
     while(1);
 }
 

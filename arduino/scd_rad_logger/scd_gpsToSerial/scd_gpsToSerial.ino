@@ -14,7 +14,7 @@
 #endif
 
 #ifndef SPEXGPS_BAUD
-#define SPEXGPS_BAUD 4800
+#define SPEXGPS_BAUD 9600
 #endif
 
 //#include <SPI.h>
@@ -44,18 +44,18 @@ void setup() {
 }
 
 void loop() {
-  if(Serial2.available()){
+  /*if(Serial2.available()){
     while (Serial2.available()) {
         Serial.write((Serial2.read()));
     }
     Serial.println();
   }
-}
-    /*
+}//*/
+    
     while(Serial2.available()){ // check for gps data
     if(gps.encode(Serial2.read()))// encode gps data
     { 
-    
+    Serial.println("===========");
     //Latitude
     Serial.print("Latitude: ");
     Serial.println(gps.location.lat(),6);

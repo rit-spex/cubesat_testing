@@ -24,7 +24,7 @@
     #define SDI 50 //This connects to the DOUT pin on the ADC
     #define SDO 51
     #define SCLK 52
-    #define ADC_CS 53
+    #define ADC_CS -1
 #endif
 
 #define ADC_BITC 12

@@ -28,7 +28,8 @@
     #define ADC_SCLK 13
     #define ADC_CS 10
 #elif SPEXSAT_BOARD == SPEXSAT_BOARD_MEGA
-    #define SD_CS_PIN 53
+    #define SD_CS_PIN 53    
+    #define ADC_CS -1
 #endif
 
 #define ADC_BITC 12
@@ -43,7 +44,7 @@ uint32_t gps_t = 0;
 double gps_alt = 0;
 double gps_spd = 0;
 uint32_t gps_sats = 0;
-uint32_t adc_val = 0;
+uint16_t adc_val = 0;
 File dataCSV;
 
 void setup(){
@@ -53,9 +54,28 @@ void setup(){
     Serial2.begin(SPEXGPS_BAUD);    
 }
 
-int read_adc(){
-    //TODO: implement ADC reading
-    adc_val = 0;
+void read_adc(){
+  adc_val = 0;
+
+  byte cmdBits=B00000000 | ADC_CHANNEL_BYTE << ADC_CHB_LOC;
+
+	SPI.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0)); //TODO: double check SPI settings
+  digitalWrite(ADC_CS, LOW);
+	byte adcVal_A = 0;
+	byte adcVal_B = 0;
+	adcVal_A = SPI.transfer(cmdBits);
+	adcVal_B = SPI.transfer(0x00);
+
+	adc_val = (adcVal_A << 8) | adcVal_B; 	
+
+  digitalWrite(ADC_CS, HIGH);
+	SPI.endTransaction();
+  #ifdef SPEXSAT_DEBUG
+	  Serial.print(adcVal_A);
+	  Serial.print(", ");
+	  Serial.print(adcVal_B);
+    Serial.print(" | ");
+  #endif
 }
 
 void read_gps(){
